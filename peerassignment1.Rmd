@@ -1,0 +1,161 @@
+---
+title: 'Reproducible Research - Peer Assignment #1'
+author: "Bbuo"
+output: html_document
+---
+
+This is an R markdown file to complete Peer Assignment #1. 
+
+The first step is "Loading and preprocessing the data". We make sure the local directory is set explicitly. The file is input using read.csv function. 
+
+```{r}
+setwd("~/DATASCIENCE")
+activityData <- read.csv('activity.csv')
+str(activityData)
+``` 
+
+What is mean total number of steps taken per day?
+
+Calculate the total number of steps taken per day. First, we need to split the data accordingly. 
+Next, sum the appropriate subsets and produce a barplot. 
+
+```{r}
+stepsPerDay <- split(activityData$steps, activityData$date)
+sumOfDay <- lapply(stepsPerDay, sum, na.rm = TRUE)
+sumOfDay<- as.data.frame(sumOfDay)
+table(sumOfDay)
+```
+
+Now, we produce a histogram of the data. 
+
+```{r}
+hist(as.numeric(sumOfDay))
+```
+
+Now, we want to get some basic stats like mean and median. 
+
+```{r}
+meanDays <- lapply(sumOfDay, mean, na.rm = TRUE)
+medianDays <- lapply(sumOfDay, median, na.rm=TRUE)
+table(meanDays)
+table(medianDays)
+```
+
+What is the average daily activity pattern?
+
+Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+First, we do some data manipulation. 
+
+```{r}
+intervalData <- split(activityData$steps, activityData$interval)
+intervalData <- as.data.frame(intervalData)
+meanInterval <- as.numeric(apply(intervalData, 2,mean, na.rm = TRUE))
+plot(meanInterval)
+```
+
+Now, we find the max location using: 
+
+```{r}
+maxInterval <- names(intervalData[which.max(meanInterval)])
+```
+
+which is: 
+
+```{r}
+maxInterval 
+```
+
+Imputing missing values
+Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
+
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+Here, we use a simple sum: 
+
+```{r}
+numberOfNA <- sum(is.na(activityData$steps))
+numberOfNA
+```
+
+Next, the strategy is to use the 5-min interval mean for the entire days.
+Here, 
+
+```{r}
+activityData$interval2 <- c(1:288)
+
+for (t in 1:length(activityData$steps)){
+    if(is.na(activityData$steps[t])){
+        activityData$steps[t] <- meanInterval[activityData$interval2[t]]
+    }  
+    else {
+        activityData$steps[t] <- activityData$steps[t]
+    }
+}
+```
+
+And now copy the data into a new variable. 
+
+```{r}
+newActivityData <- activityData
+activityData <- read.csv('activity.csv')
+```
+
+Now, we do some stats on the new data. 
+
+```{r}
+hist(newActivityData$steps)
+```
+
+Here, we can see that the data is pretty different to the first histogram. All of the NA are mostly averaged to near-zero values so the distribution has changed. 
+Now we calculate some basic stats. 
+
+```{r}
+newDate <- split(newActivityData$steps, newActivityData$date)
+meanNew <- lapply(newDate, mean, na.rm = TRUE)
+medianNew <- lapply(newDate, median, na.rm=TRUE)
+table(meanNew)
+table(medianNew)
+```
+
+Are there differences in activity patterns between weekdays and weekends?
+
+Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+```{r}
+newActivityData$date <- strptime(newActivityData$date, format="%Y-%m-%d", tz ="")
+newActivityData$weekday <- weekdays(newActivityData$date)
+
+ListWeekdays <- c("Monday", "Tuesday", "Wednesday","Thursday", "Friday")
+ListWeekend <- c("Saturday","Sunday")
+
+for (t in 1:length(newActivityData$date)){
+    if(newActivityData$weekday[t] %in% ListWeekdays){
+        newActivityData$weekday[t] <- "Weekday"
+    }  
+    else {
+        newActivityData$weekday[t] <- "Weekend"
+    }
+}
+```
+
+Now, the new variable is produced: 
+
+```{r}
+head(newActivityData)
+```
+
+Next we analyze the average number of steps taken in weekdays and weekends. Therefore: 
+
+```{r}
+difData <- split(newActivityData, newActivityData$weekday)
+mmmm <- difData[1]
+llll <- difData[2]
+weekdaysAVG <- split(mmmm$Weekday$steps, mmmm$Weekday$interval)
+ccc <- as.numeric(lapply(weekdaysAVG, mean, na.rm = TRUE))
+weekendAVG <- split(llll$Weekend$steps, llll$Weekend$interval)
+ddd <- as.numeric(lapply(weekendAVG, mean, na.rm = TRUE))
+```
+And we plot the data using: 
+
+```{r}
+plot(ccc,ddd)
+```
